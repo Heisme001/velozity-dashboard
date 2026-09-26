@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { KeyRound, Mail, ArrowRight, ShieldCheck, Terminal, Users, Cpu } from 'lucide-react';
+import { KeyRound, Mail, ArrowRight, ShieldCheck, Terminal, Users, UserCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('admin@velozity.com');
@@ -30,26 +30,22 @@ export const LoginPage: React.FC = () => {
   };
 
   const presetAccounts = [
-    { role: 'VP Engineering (Admin)', email: 'admin@velozity.com', icon: ShieldCheck, tag: 'Full Org Access' },
-    { role: 'Principal PM – Ravi', email: 'ravi.pm@velozity.com', icon: Users, tag: 'Projects 1 & 2' },
-    { role: 'Sr. Backend Engineer – Priya', email: 'priya.dev@velozity.com', icon: Terminal, tag: 'Assigned Tickets' }
+    { role: 'Admin', email: 'admin@velozity.com', icon: ShieldCheck, tag: 'All Projects' },
+    { role: 'Project Manager (Ravi)', email: 'ravi.pm@velozity.com', icon: Users, tag: 'Projects 1 & 2' },
+    { role: 'Developer (Priya)', email: 'priya.dev@velozity.com', icon: Terminal, tag: 'Assigned Tasks' }
   ];
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-slate-100 flex flex-col justify-between font-sans selection:bg-blue-500 selection:text-white">
       <header className="border-b border-[#30363d] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-500/20">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-blue-500/20">
             V
           </div>
           <div className="flex items-center space-x-2">
             <span className="font-bold tracking-tight text-white text-base">Velozity</span>
-            <span className="text-slate-400 font-mono hidden sm:inline">/ Engineering Control Plane</span>
+            <span className="text-slate-400 text-sm hidden sm:inline">Project Dashboard</span>
           </div>
-        </div>
-        <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span>SYSTEM OPERATIONAL</span>
         </div>
       </header>
 
@@ -58,7 +54,7 @@ export const LoginPage: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Sign in to your account</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Enter your corporate credentials or choose a pre-configured engineering role.
+              Enter your credentials or select a demo profile below.
             </p>
           </div>
 
@@ -70,7 +66,7 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Work Email</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Email</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                 <input
@@ -110,15 +106,15 @@ export const LoginPage: React.FC = () => {
               disabled={loading}
               className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-lg text-sm flex items-center justify-center space-x-2 shadow-sm transition disabled:opacity-50"
             >
-              <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+              <span>{loading ? 'Signing in...' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
           <div className="pt-6 border-t border-[#30363d]">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5 font-mono">
-              <Cpu className="w-3.5 h-3.5 text-blue-400" />
-              <span>Quick-Switch Demo Accounts</span>
+              <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+              <span>Demo Accounts</span>
             </div>
 
             <div className="space-y-2">
@@ -151,7 +147,7 @@ export const LoginPage: React.FC = () => {
       </div>
 
       <footer className="border-t border-[#30363d] px-6 py-4 text-center text-xs text-slate-500">
-        Velozity Global Solutions © 2026 · Real-Time Production Workspace
+        Velozity Dashboard © 2026
       </footer>
     </div>
   );

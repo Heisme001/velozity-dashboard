@@ -4,9 +4,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding Velozity Dashboard with realistic enterprise dataset...');
+  console.log('Seeding database...');
 
-  // Clean slate
   await prisma.notification.deleteMany();
   await prisma.activity.deleteMany();
   await prisma.task.deleteMany();
@@ -16,10 +15,10 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash('Password@123', 10);
 
-  // ── Users: 1 Admin, 2 PMs, 4 Devs ──────────────────────────────────────────
+  // Users
   const admin = await prisma.user.create({
     data: {
-      name: 'Hemanth Kumar (VP Engineering)',
+      name: 'Hemanth Kumar',
       email: 'admin@velozity.com',
       password: hashedPassword,
       role: Role.ADMIN
@@ -28,7 +27,7 @@ async function main() {
 
   const pm1 = await prisma.user.create({
     data: {
-      name: 'Ravi Teja (Principal PM)',
+      name: 'Ravi Teja',
       email: 'ravi.pm@velozity.com',
       password: hashedPassword,
       role: Role.PROJECT_MANAGER
@@ -37,7 +36,7 @@ async function main() {
 
   const pm2 = await prisma.user.create({
     data: {
-      name: 'Ananya Iyer (Technical PM)',
+      name: 'Ananya Iyer',
       email: 'ananya.pm@velozity.com',
       password: hashedPassword,
       role: Role.PROJECT_MANAGER
@@ -46,7 +45,7 @@ async function main() {
 
   const dev1 = await prisma.user.create({
     data: {
-      name: 'Priya Sharma (Sr. Backend)',
+      name: 'Priya Sharma',
       email: 'priya.dev@velozity.com',
       password: hashedPassword,
       role: Role.DEVELOPER
@@ -55,7 +54,7 @@ async function main() {
 
   const dev2 = await prisma.user.create({
     data: {
-      name: 'Siddharth Verma (Full Stack)',
+      name: 'Siddharth Verma',
       email: 'siddharth.dev@velozity.com',
       password: hashedPassword,
       role: Role.DEVELOPER
@@ -64,7 +63,7 @@ async function main() {
 
   const dev3 = await prisma.user.create({
     data: {
-      name: 'Marcus Vance (Distributed Systems)',
+      name: 'Marcus Vance',
       email: 'marcus.dev@velozity.com',
       password: hashedPassword,
       role: Role.DEVELOPER
@@ -73,16 +72,14 @@ async function main() {
 
   const dev4 = await prisma.user.create({
     data: {
-      name: 'Kavya Nair (DevOps & Data)',
+      name: 'Kavya Nair',
       email: 'kavya.dev@velozity.com',
       password: hashedPassword,
       role: Role.DEVELOPER
     }
   });
 
-  console.log('✅ Created 7 engineering users (1 Admin, 2 PMs, 4 Developers)');
-
-  // ── Clients ──────────────────────────────────────────────────────────────────
+  // Clients
   const client1 = await prisma.client.create({
     data: {
       name: 'Vikram Mehta',
@@ -105,9 +102,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created 3 enterprise clients');
-
-  // ── Projects ─────────────────────────────────────────────────────────────────
+  // Projects
   const project1 = await prisma.project.create({
     data: {
       title: 'Hyperlocal Courier Geo-Routing Engine',
@@ -138,17 +133,13 @@ async function main() {
     }
   });
 
-  console.log('✅ Created 3 projects (pm1 owns projects 1 & 2, pm2 owns project 3)');
-
-  // ── Date helpers ──────────────────────────────────────────────────────────────
   const now = new Date();
-  const pastDate1 = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000); // 4 days ago
-  const pastDate2 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000); // yesterday (overdue)
-  const futureDate1 = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // in 2 days
-  const futureDate2 = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000); // in 5 days
-  const futureDate3 = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000); // in 10 days
+  const pastDate1 = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000);
+  const pastDate2 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+  const futureDate1 = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+  const futureDate2 = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+  const futureDate3 = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
 
-  // ── Task factory ──────────────────────────────────────────────────────────────
   async function seedTask(params: {
     title: string;
     description: string;
@@ -178,7 +169,6 @@ async function main() {
       }
     });
 
-    // Pre-seeded activity log entry so the feed is never empty on first load
     await prisma.activity.create({
       data: {
         action: 'TASK_CREATED',
@@ -194,7 +184,7 @@ async function main() {
     return task;
   }
 
-  // ── Project 1 Tasks (5 tasks, 1 overdue) ─────────────────────────────────────
+  // Project 1 tasks
   const t1 = await seedTask({
     title: 'PostGIS QuadTree spatial index partitioning',
     description:
@@ -236,7 +226,7 @@ async function main() {
     description: 'Benchmark GPS polling intervals between active navigation vs idle waiting states.',
     status: TaskStatus.TODO,
     priority: Priority.MEDIUM,
-    dueDate: pastDate2, // OVERDUE
+    dueDate: pastDate2,
     isOverdue: true,
     projectId: project1.id,
     developerId: dev2.id,
@@ -254,7 +244,7 @@ async function main() {
     creator: pm1
   });
 
-  // ── Project 2 Tasks (5 tasks, 2 overdue) ─────────────────────────────────────
+  // Project 2 tasks
   const t6 = await seedTask({
     title: 'UPI 2.0 Webhook callback idempotency ledger',
     description:
@@ -273,7 +263,7 @@ async function main() {
       'Hash chain order modification audits with SHA-256 before writing to cold S3 Glacier storage.',
     status: TaskStatus.IN_PROGRESS,
     priority: Priority.CRITICAL,
-    dueDate: pastDate1, // OVERDUE
+    dueDate: pastDate1,
     isOverdue: true,
     projectId: project2.id,
     developerId: dev3.id,
@@ -315,7 +305,7 @@ async function main() {
     creator: pm1
   });
 
-  // ── Project 3 Tasks (5 tasks) ─────────────────────────────────────────────────
+  // Project 3 tasks
   const t11 = await seedTask({
     title: 'WebRTC TURN relay server cluster deployment',
     description:
@@ -346,7 +336,7 @@ async function main() {
       'Fine-tune PaddleOCR pipeline on Indian handwritten pharmaceutical brand names and dosage codes.',
     status: TaskStatus.TODO,
     priority: Priority.MEDIUM,
-    dueDate: pastDate2, // OVERDUE
+    dueDate: pastDate2,
     isOverdue: true,
     projectId: project3.id,
     developerId: dev2.id,
@@ -377,13 +367,11 @@ async function main() {
     creator: pm2
   });
 
-  console.log('✅ Created 15 real-world engineering tasks (3 overdue: t4, t7, t13)');
-
-  // ── Pre-seeded status-change activity logs ────────────────────────────────────
+  // Activity logs
   await prisma.activity.create({
     data: {
       action: 'STATUS_CHANGED',
-      description: `${dev2.name} moved Task #${t3.id} to In Review: Ready for staging soak test`,
+      description: `${dev2.name} moved Task #${t3.id} to In Review`,
       oldStatus: TaskStatus.IN_PROGRESS,
       newStatus: TaskStatus.IN_REVIEW,
       taskId: t3.id,
@@ -396,7 +384,7 @@ async function main() {
   await prisma.activity.create({
     data: {
       action: 'STATUS_CHANGED',
-      description: `${dev3.name} moved Task #${t8.id} to In Review: Resiliency tests passing 98% coverage`,
+      description: `${dev3.name} moved Task #${t8.id} to In Review`,
       oldStatus: TaskStatus.IN_PROGRESS,
       newStatus: TaskStatus.IN_REVIEW,
       taskId: t8.id,
@@ -409,7 +397,7 @@ async function main() {
   await prisma.activity.create({
     data: {
       action: 'STATUS_CHANGED',
-      description: `${dev1.name} completed Task #${t1.id}: PostGIS spatial indexes deployed to production`,
+      description: `${dev1.name} completed Task #${t1.id}`,
       oldStatus: TaskStatus.IN_REVIEW,
       newStatus: TaskStatus.DONE,
       taskId: t1.id,
@@ -422,7 +410,7 @@ async function main() {
   await prisma.activity.create({
     data: {
       action: 'STATUS_CHANGED',
-      description: `${dev1.name} completed Task #${t6.id}: UPI idempotency ledger live in production`,
+      description: `${dev1.name} completed Task #${t6.id}`,
       oldStatus: TaskStatus.IN_REVIEW,
       newStatus: TaskStatus.DONE,
       taskId: t6.id,
@@ -432,14 +420,12 @@ async function main() {
     }
   });
 
-  console.log('✅ Created pre-seeded activity log entries');
-
-  // ── Pre-seeded notifications ──────────────────────────────────────────────────
+  // Notifications
   await prisma.notification.create({
     data: {
       userId: pm1.id,
-      title: 'Pull Request Ready for Review',
-      message: `Task #${t3.id} "Real-time WebSocket telemetry for delivery fleets" has been submitted for QA approval.`,
+      title: 'Task In Review',
+      message: `Task #${t3.id} "Real-time WebSocket telemetry for delivery fleets" is ready for review.`,
       link: `/projects/${project1.id}`,
       isRead: false
     }
@@ -458,8 +444,8 @@ async function main() {
   await prisma.notification.create({
     data: {
       userId: dev1.id,
-      title: 'P0 Critical Task Assigned',
-      message: `You have been assigned to "Kafka rider dispatch consumer lag backpressure" — P0 Critical priority.`,
+      title: 'Critical Task Assigned',
+      message: `You have been assigned to "Kafka rider dispatch consumer lag backpressure".`,
       link: `/projects/${project1.id}`,
       isRead: false
     }
@@ -478,25 +464,14 @@ async function main() {
   await prisma.notification.create({
     data: {
       userId: dev3.id,
-      title: 'SLA Breach Alert',
-      message: `Task #${t7.id} "SEBI compliance audit logging" is now overdue. Immediate attention required.`,
+      title: 'Task Overdue Alert',
+      message: `Task #${t7.id} "SEBI compliance audit logging & immutability" is overdue.`,
       link: `/projects/${project2.id}`,
       isRead: false
     }
   });
 
-  console.log('✅ Created pre-seeded notifications');
-  console.log('');
-  console.log('🎉 Seed complete!');
-  console.log('');
-  console.log('  Demo accounts (all password: Password@123)');
-  console.log(`  Admin     → admin@velozity.com`);
-  console.log(`  PM 1      → ravi.pm@velozity.com      (manages Projects 1 & 2)`);
-  console.log(`  PM 2      → ananya.pm@velozity.com    (manages Project 3)`);
-  console.log(`  Dev 1     → priya.dev@velozity.com`);
-  console.log(`  Dev 2     → siddharth.dev@velozity.com`);
-  console.log(`  Dev 3     → marcus.dev@velozity.com`);
-  console.log(`  Dev 4     → kavya.dev@velozity.com`);
+  console.log('Seed completed successfully.');
 }
 
 main()

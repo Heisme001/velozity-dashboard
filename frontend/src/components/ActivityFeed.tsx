@@ -26,9 +26,6 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ socket, projectId })
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Initial load: fetch last 20 role-filtered events from DB ──────────────
-  // This satisfies the "offline users see last 20 missed events from the DB"
-  // requirement. The server enforces role-based filtering.
   useEffect(() => {
     async function loadFromDB() {
       try {
@@ -38,13 +35,12 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ socket, projectId })
         const res = await api.get(url);
         if (res.data.success) {
           setActivities(res.data.data);
-          // Track the timestamp of the most recent event for catch-up
           if (res.data.data.length > 0) {
             localStorage.setItem('lastActivityTimestamp', res.data.data[0].createdAt);
           }
         }
       } catch (err) {
-        console.error('[ActivityFeed] Failed to load activities', err);
+        console.error('Failed to load activities:', err);
       } finally {
         setLoading(false);
       }
@@ -52,23 +48,16 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ socket, projectId })
     loadFromDB();
   }, [projectId]);
 
-  // ── Real-time: listen for live activity events from the socket ────────────
-  // The backend only sends events the current user is allowed to see
-  // (Admin=all, PM=own projects, Dev=own tasks). No client-side filtering here.
   useEffect(() => {
     if (!socket) return;
 
     const handleLiveFeed = (newAct: Activity) => {
       setActivities(prev => [newAct, ...prev.slice(0, 24)]);
-      // Update the last-seen timestamp for future catch-up calls
       localStorage.setItem('lastActivityTimestamp', newAct.createdAt);
     };
 
-    // Live feed events
     socket.on('activity:feed', handleLiveFeed);
 
-    // Catch-up result: events missed while offline (emitted by server
-    // in response to the 'activity:catch-up' event sent on connect)
     socket.on('activity:catch-up:result', (missed: Activity[]) => {
       if (missed.length === 0) return;
       setActivities(prev => {
@@ -91,25 +80,23 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ socket, projectId })
 
   return (
     <div className="bg-[#161b22] border border-[#30363d] rounded-xl flex flex-col h-full overflow-hidden shadow-sm">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-[#30363d] flex items-center justify-between bg-[#0d1117]/80">
         <div className="flex items-center space-x-2">
           <GitCommit className="w-4 h-4 text-blue-400" />
           <span className="text-xs text-white uppercase tracking-wider font-mono">
-            Live Audit Log
+            Activity Log
           </span>
         </div>
         <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>SYNCED</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>Live</span>
         </div>
       </div>
 
-      {/* Feed */}
       <div className="divide-y divide-[#30363d]/60 overflow-y-auto max-h-[580px]">
         {loading ? (
           <div className="p-4 text-center text-xs text-slate-500 font-mono">
-            Fetching activity logs...
+            Loading activity...
           </div>
         ) : activities.length === 0 ? (
           <div className="p-4 text-center text-xs text-slate-500">No recent activity</div>

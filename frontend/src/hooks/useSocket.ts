@@ -12,8 +12,6 @@ export function useSocket() {
     const token = localStorage.getItem('accessToken');
     if (!token || !user) return;
 
-    // Dynamic socket URL: uses VITE_SOCKET_URL env var in production,
-    // or falls back to same host on port 5000 for local development.
     const hostname = window.location.hostname || 'localhost';
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     const SOCKET_URL =
@@ -25,19 +23,14 @@ export function useSocket() {
       transports: ['websocket', 'polling']
     });
 
-    // ── Core connection events ───────────────────────────────────────────────
     socket.on('connect', () => {
       setConnected(true);
-
-      // On reconnect, ask the server for any missed events.
-      // We store the timestamp of the last event we received in localStorage.
       const lastSeen = localStorage.getItem('lastActivityTimestamp') || new Date(0).toISOString();
       socket.emit('activity:catch-up', lastSeen);
     });
 
     socket.on('disconnect', () => setConnected(false));
 
-    // ── Presence (admin only, but harmless for other roles) ──────────────────
     socket.on('presence:update', (data: { onlineCount: number }) => {
       setOnlineCount(data.onlineCount);
     });

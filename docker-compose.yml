@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-  # ── PostgreSQL ─────────────────────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: velozity_postgres
@@ -20,7 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Backend (Express + Socket.io) ──────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -41,7 +39,6 @@ services:
     command: >
       sh -c "npx prisma migrate deploy && node dist/server.js"
 
-  # ── Frontend (Vite dev server in dev, nginx-served in prod) ───────────────
   frontend:
     build:
       context: ./frontend

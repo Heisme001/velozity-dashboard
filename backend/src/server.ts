@@ -15,37 +15,25 @@ const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
 
-// Dynamic CORS – accepts any origin in dev; in prod set FRONTEND_URL
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, curl, mobile apps)
-    // and any web origin.  For production, swap to:
-    //   origin: process.env.FRONTEND_URL
-    return callback(null, true);
-  },
+  origin: (origin, callback) => callback(null, true),
   credentials: true
 }));
 
 app.use(express.json());
 app.use(cookieParser());
 
-// REST API
 app.use('/api', apiRouter);
 
-// Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Global error handler (must be last)
 app.use(errorHandler);
 
-// Initialize Socket.io
 socketManager.init(server);
-
-// Start background cron (overdue task scheduler)
 startOverdueTaskCron();
 
 server.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`Velozity Dashboard Backend running on http://0.0.0.0:${PORT}`);
+  console.log(`Backend server running on http://0.0.0.0:${PORT}`);
 });

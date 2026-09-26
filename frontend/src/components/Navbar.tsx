@@ -25,7 +25,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ── Load notifications on mount ────────────────────────────────────────────
   useEffect(() => {
     async function fetchNotifs() {
       try {
@@ -39,7 +38,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
     fetchNotifs();
   }, []);
 
-  // ── Real-time: receive new notifications via WebSocket (no polling) ─────────
   useEffect(() => {
     if (!socket) return;
 
@@ -49,10 +47,11 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
     };
 
     socket.on('notification:new', handleNew);
-    return () => { socket.off('notification:new', handleNew); };
+    return () => {
+      socket.off('notification:new', handleNew);
+    };
   }, [socket]);
 
-  // ── Close dropdown when clicking outside ──────────────────────────────────
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -63,7 +62,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Mark a single notification as read ────────────────────────────────────
   const markOneRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
@@ -74,7 +72,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
     } catch {}
   };
 
-  // ── Mark all notifications as read ────────────────────────────────────────
   const markAllRead = async () => {
     try {
       await api.patch('/notifications/all/read');
@@ -84,13 +81,13 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
   };
 
   const roleBadges: Record<string, { label: string; cls: string }> = {
-    ADMIN: { label: 'Admin / Lead', cls: 'bg-purple-950/60 text-purple-300 border-purple-800/80' },
+    ADMIN: { label: 'Admin', cls: 'bg-purple-950/60 text-purple-300 border-purple-800/80' },
     PROJECT_MANAGER: {
-      label: 'Product Lead',
+      label: 'Project Manager',
       cls: 'bg-blue-950/60 text-blue-300 border-blue-800/80'
     },
     DEVELOPER: {
-      label: 'Engineer',
+      label: 'Developer',
       cls: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80'
     }
   };
@@ -102,26 +99,23 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#161b22] border-b border-[#30363d] backdrop-blur-md">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        {/* Left: Brand + role badge */}
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center font-black text-white text-xs">
+            <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center font-bold text-white text-xs">
               V
             </div>
             <span className="font-semibold text-white tracking-tight text-sm">Velozity</span>
           </div>
           <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-[#30363d] text-xs text-slate-400">
             <FolderGit2 className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-slate-300">Engineering Workspaces</span>
+            <span className="text-slate-300">Workspace</span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase ${badge.cls}`}>
               {badge.label}
             </span>
           </div>
         </div>
 
-        {/* Right: presence + notifications + user */}
         <div className="flex items-center space-x-3">
-          {/* Live presence counter – admin only */}
           {user?.role === 'ADMIN' && (
             <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-[#0d1117] border border-[#30363d] text-emerald-400 text-xs font-mono">
               <Radio className="w-3 h-3 animate-pulse" />
@@ -129,7 +123,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
             </div>
           )}
 
-          {/* Notification bell + dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
               id="notification-bell"
@@ -147,7 +140,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
 
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl overflow-hidden z-50">
-                {/* Dropdown header */}
                 <div className="px-4 py-2.5 border-b border-[#30363d] flex items-center justify-between bg-[#0d1117]">
                   <span className="text-xs text-white uppercase tracking-wider font-mono">
                     Notifications
@@ -175,7 +167,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
                   </div>
                 </div>
 
-                {/* Notification list */}
                 <div className="max-h-[400px] overflow-y-auto divide-y divide-[#30363d]">
                   {notifications.length === 0 ? (
                     <div className="p-4 text-center text-xs text-slate-500">
@@ -215,7 +206,6 @@ export const Navbar: React.FC<NavbarProps> = ({ socket, onlineCount }) => {
             )}
           </div>
 
-          {/* User info + logout */}
           <div className="flex items-center space-x-2 pl-2 border-l border-[#30363d]">
             <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-200">
               {user?.name.charAt(0)}

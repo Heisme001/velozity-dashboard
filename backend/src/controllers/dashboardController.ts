@@ -3,14 +3,11 @@ import { prisma } from '../services/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Role } from '@prisma/client';
 
-// ── Activity Feed ──────────────────────────────────────────────────────────────
-
 export async function getActivities(req: AuthenticatedRequest, res: Response) {
   const user = req.user!;
   const limit = Math.min(parseInt(String(req.query.limit || '20'), 10), 50);
   const projectId = req.query.projectId ? String(req.query.projectId) : undefined;
 
-  // Build role-filtered where clause – enforced server-side, not client-side
   let whereClause: any = {};
 
   if (projectId) {
@@ -18,12 +15,10 @@ export async function getActivities(req: AuthenticatedRequest, res: Response) {
   }
 
   if (user.role === Role.ADMIN) {
-    // Admin sees the global feed: no additional filter
+    // Admin has global visibility
   } else if (user.role === Role.PROJECT_MANAGER) {
-    // PM sees only activities on projects they manage
     whereClause.project = { pmId: user.userId };
   } else if (user.role === Role.DEVELOPER) {
-    // Developer sees only activities on tasks assigned to them
     whereClause.task = { developerId: user.userId };
   }
 
@@ -41,8 +36,6 @@ export async function getActivities(req: AuthenticatedRequest, res: Response) {
   return res.json({ success: true, data: activities });
 }
 
-// ── Notifications ──────────────────────────────────────────────────────────────
-
 export async function getNotifications(req: AuthenticatedRequest, res: Response) {
   const user = req.user!;
 
@@ -59,12 +52,10 @@ export async function getNotifications(req: AuthenticatedRequest, res: Response)
   return res.json({ success: true, data: { notifications, unreadCount } });
 }
 
-/** Mark a single notification as read */
 export async function markNotificationRead(req: AuthenticatedRequest, res: Response) {
   const { id } = req.params;
   const user = req.user!;
 
-  // Prevent users from marking other users' notifications
   const notif = await prisma.notification.findUnique({ where: { id } });
   if (!notif || notif.userId !== user.userId) {
     return res.status(403).json({ success: false, error: 'Forbidden' });
@@ -78,7 +69,6 @@ export async function markNotificationRead(req: AuthenticatedRequest, res: Respo
   return res.json({ success: true, message: 'Notification marked as read' });
 }
 
-/** Mark ALL notifications for the current user as read */
 export async function markAllNotificationsRead(req: AuthenticatedRequest, res: Response) {
   const user = req.user!;
 
@@ -89,8 +79,6 @@ export async function markAllNotificationsRead(req: AuthenticatedRequest, res: R
 
   return res.json({ success: true, message: 'All notifications marked as read' });
 }
-
-// ── Dashboard Stats ────────────────────────────────────────────────────────────
 
 export async function getDashboardStats(req: AuthenticatedRequest, res: Response) {
   const user = req.user!;
@@ -103,7 +91,6 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
       prisma.task.groupBy({ by: ['status'], _count: { _all: true } })
     ]);
 
-    // Dynamic online count from socket manager
     const { socketManager } = await import('../socket/socketManager');
     const activeUsersOnline = socketManager.getOnlineUsersCount();
 

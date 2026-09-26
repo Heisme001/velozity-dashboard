@@ -33,7 +33,6 @@ export const DashboardPage: React.FC = () => {
   const filterPriority = searchParams.get('priority') || '';
   const filterProject = searchParams.get('projectId') || '';
 
-  // ── Data loading ───────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -46,7 +45,7 @@ export const DashboardPage: React.FC = () => {
       if (tasksRes.data.success) setTasks(tasksRes.data.data);
       if (projRes.data.success) setProjects(projRes.data.data);
     } catch (err) {
-      console.error('[Dashboard] Failed to load data', err);
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -56,7 +55,6 @@ export const DashboardPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // ── Real-time: refresh task list when a task:updated event arrives ─────────
   useEffect(() => {
     if (!socket) return;
 
@@ -70,14 +68,14 @@ export const DashboardPage: React.FC = () => {
     };
 
     socket.on('task:updated', handleTaskUpdated);
-    return () => { socket.off('task:updated', handleTaskUpdated); };
+    return () => {
+      socket.off('task:updated', handleTaskUpdated);
+    };
   }, [socket, searchParams]);
 
-  // ── Status change handler ──────────────────────────────────────────────────
   const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
     try {
       await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
-      // Optimistic update locally; real-time socket event will also refresh
       setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t)));
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Failed to update task status';
@@ -85,7 +83,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // ── URL filter helpers ─────────────────────────────────────────────────────
   const handleFilterChange = (key: string, value: string) => {
     const nextParams = new URLSearchParams(searchParams);
     if (value) {
@@ -96,7 +93,6 @@ export const DashboardPage: React.FC = () => {
     setSearchParams(nextParams);
   };
 
-  // ── Client-side text search (on top of server-side role filtering) ─────────
   const filteredTasks = tasks.filter(t => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -109,10 +105,10 @@ export const DashboardPage: React.FC = () => {
   });
 
   const columns: { status: Task['status']; title: string; color: string }[] = [
-    { status: 'TODO', title: 'Backlog / To Do', color: 'border-slate-600' },
-    { status: 'IN_PROGRESS', title: 'In Development', color: 'border-blue-500' },
-    { status: 'IN_REVIEW', title: 'Code Review & QA', color: 'border-amber-500' },
-    { status: 'DONE', title: 'Production Deployed', color: 'border-emerald-500' }
+    { status: 'TODO', title: 'To Do', color: 'border-slate-600' },
+    { status: 'IN_PROGRESS', title: 'In Progress', color: 'border-blue-500' },
+    { status: 'IN_REVIEW', title: 'In Review', color: 'border-amber-500' },
+    { status: 'DONE', title: 'Completed', color: 'border-emerald-500' }
   ];
 
   const overdueTasks = tasks.filter(t => t.isOverdue);
@@ -124,8 +120,7 @@ export const DashboardPage: React.FC = () => {
       <Navbar socket={socket} onlineCount={onlineCount} />
 
       <main className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-        {/* ── Stat cards ───────────────────────────────────────────────────── */}
+        {/* Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <div className="p-4 rounded-xl bg-[#161b22] border border-[#30363d] shadow-sm">
             <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
@@ -138,7 +133,7 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div className="p-4 rounded-xl bg-[#161b22] border border-[#30363d] shadow-sm">
             <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              <span>Open Tickets</span>
+              <span>Open Tasks</span>
               <Clock className="w-4 h-4 text-sky-400" />
             </div>
             <div className="text-2xl font-bold text-sky-400 mt-1.5 font-mono">
@@ -147,14 +142,14 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div className="p-4 rounded-xl bg-[#161b22] border border-[#30363d] shadow-sm">
             <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              <span>SLA Breaches</span>
+              <span>Overdue Tasks</span>
               <AlertTriangle className="w-4 h-4 text-rose-400" />
             </div>
             <div className="text-2xl font-bold text-rose-400 mt-1.5 font-mono flex items-center space-x-2">
               <span>{overdueTasks.length}</span>
               {overdueTasks.length > 0 && (
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80">
-                  Action Required
+                  Attention
                 </span>
               )}
             </div>
@@ -163,7 +158,7 @@ export const DashboardPage: React.FC = () => {
             {user?.role === 'ADMIN' ? (
               <>
                 <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                  <span>Online Now</span>
+                  <span>Online Users</span>
                   <Users className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div className="text-2xl font-bold text-emerald-400 mt-1.5 font-mono">
@@ -184,10 +179,9 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Filter bar ───────────────────────────────────────────────────── */}
+        {/* Filter Toolbar */}
         <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
-            {/* Text search */}
             <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
               <input
@@ -195,19 +189,18 @@ export const DashboardPage: React.FC = () => {
                 id="task-search"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search ticket..."
+                placeholder="Search tasks..."
                 className="w-full bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-500 font-sans"
               />
             </div>
 
-            {/* Project filter */}
             <select
               id="filter-project"
               value={filterProject}
               onChange={e => handleFilterChange('projectId', e.target.value)}
               className="bg-[#0d1117] border border-[#30363d] text-xs rounded-lg px-2.5 py-1.5 text-slate-300 font-sans cursor-pointer focus:outline-none focus:border-blue-500"
             >
-              <option value="">All Client Projects</option>
+              <option value="">All Projects</option>
               {projects.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -215,7 +208,6 @@ export const DashboardPage: React.FC = () => {
               ))}
             </select>
 
-            {/* Priority filter */}
             <select
               id="filter-priority"
               value={filterPriority}
@@ -223,13 +215,12 @@ export const DashboardPage: React.FC = () => {
               className="bg-[#0d1117] border border-[#30363d] text-xs rounded-lg px-2.5 py-1.5 text-slate-300 font-sans cursor-pointer focus:outline-none focus:border-blue-500"
             >
               <option value="">All Priorities</option>
-              <option value="CRITICAL">P0 Critical</option>
-              <option value="HIGH">High Priority</option>
-              <option value="MEDIUM">Medium Priority</option>
-              <option value="LOW">Low Priority</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
             </select>
 
-            {/* Status filter */}
             <select
               id="filter-status"
               value={filterStatus}
@@ -244,7 +235,6 @@ export const DashboardPage: React.FC = () => {
             </select>
           </div>
 
-          {/* View toggle */}
           <div className="flex items-center space-x-1 border border-[#30363d] rounded-lg p-0.5 bg-[#0d1117]">
             <button
               id="view-kanban"
@@ -275,20 +265,18 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Main content area ─────────────────────────────────────────────── */}
+        {/* Content Section */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Tasks (3/4 width) */}
           <div className="lg:col-span-3 space-y-4">
             {loading ? (
               <div className="p-8 text-center text-slate-500 text-xs font-mono">
-                Syncing workspace tickets...
+                Loading tasks...
               </div>
             ) : filteredTasks.length === 0 ? (
               <div className="p-8 text-center rounded-xl bg-[#161b22] border border-[#30363d] text-slate-400 text-xs">
-                No tickets match the active filter criteria.
+                No tasks match the selected filter.
               </div>
             ) : viewMode === 'kanban' ? (
-              /* Kanban board */
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 items-start">
                 {columns.map(col => {
                   const colTasks = filteredTasks.filter(t => t.status === col.status);
@@ -309,7 +297,7 @@ export const DashboardPage: React.FC = () => {
                       <div className="space-y-2.5 overflow-y-auto flex-1">
                         {colTasks.length === 0 ? (
                           <div className="p-4 text-center text-[11px] text-slate-600 border border-dashed border-[#30363d] rounded-lg">
-                            No tickets
+                            No tasks
                           </div>
                         ) : (
                           colTasks.map(task => (
@@ -327,15 +315,14 @@ export const DashboardPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              /* List / table view */
               <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="text-slate-400 font-mono text-[11px] uppercase border-b border-[#30363d] bg-[#0d1117]/50">
                     <tr>
                       <th className="py-2.5 px-3">ID</th>
-                      <th className="py-2.5 px-3">Title & Context</th>
+                      <th className="py-2.5 px-3">Title & Project</th>
                       <th className="py-2.5 px-3">Priority</th>
-                      <th className="py-2.5 px-3">Assigned</th>
+                      <th className="py-2.5 px-3">Assignee</th>
                       <th className="py-2.5 px-3">Due Date</th>
                       <th className="py-2.5 px-3">Status</th>
                     </tr>
@@ -396,7 +383,6 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          {/* Activity feed (1/4 width) */}
           <div className="lg:col-span-1">
             <ActivityFeed socket={socket} projectId="" />
           </div>

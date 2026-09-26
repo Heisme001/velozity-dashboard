@@ -32,20 +32,15 @@ import { Role } from '@prisma/client';
 
 export const apiRouter = Router();
 
-// ── Public auth routes ────────────────────────────────────────────────────────
+// Auth routes
 apiRouter.post('/auth/login', validateBody(loginSchema), login);
 apiRouter.post('/auth/refresh', refreshToken);
 apiRouter.post('/auth/logout', logout);
 apiRouter.get('/auth/me', authenticate, getCurrentUser);
 
-// ── Projects ──────────────────────────────────────────────────────────────────
-// GET /projects  – role-filtered inside getProjects (Admin=all, PM=own, Dev=assigned)
+// Projects routes
 apiRouter.get('/projects', authenticate, getProjects);
-
-// GET /projects/:id – resource-level RBAC inside getProjectById
 apiRouter.get('/projects/:id', authenticate, getProjectById);
-
-// POST /projects – only Admin and PM can create projects
 apiRouter.post(
   '/projects',
   authenticate,
@@ -54,12 +49,8 @@ apiRouter.post(
   createProject
 );
 
-// ── Tasks ─────────────────────────────────────────────────────────────────────
-// GET /tasks  – role-filtered inside getTasks
-// Supports query params: ?status=&priority=&projectId=&dueDateFrom=&dueDateTo=
+// Tasks routes
 apiRouter.get('/tasks', authenticate, getTasks);
-
-// POST /tasks – only Admin and PM
 apiRouter.post(
   '/tasks',
   authenticate,
@@ -67,8 +58,6 @@ apiRouter.post(
   validateBody(createTaskSchema),
   createTask
 );
-
-// PATCH /tasks/:id/status – all roles can call, but resource-level check inside
 apiRouter.patch(
   '/tasks/:id/status',
   authenticate,
@@ -76,17 +65,13 @@ apiRouter.patch(
   updateTaskStatus
 );
 
-// ── Activities (role-filtered) ────────────────────────────────────────────────
+// Activity feed
 apiRouter.get('/activities', authenticate, getActivities);
 
-// ── Notifications ─────────────────────────────────────────────────────────────
+// Notifications
 apiRouter.get('/notifications', authenticate, getNotifications);
-
-// Mark a single notification as read
 apiRouter.patch('/notifications/:id/read', authenticate, markNotificationRead);
-
-// Mark ALL notifications as read  (Navbar uses PATCH /notifications/all/read)
 apiRouter.patch('/notifications/all/read', authenticate, markAllNotificationsRead);
 
-// ── Dashboard stats ───────────────────────────────────────────────────────────
+// Dashboard metrics
 apiRouter.get('/dashboard/stats', authenticate, getDashboardStats);
