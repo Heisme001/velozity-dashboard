@@ -1,178 +1,172 @@
-# Velozity — Real-Time Client Project Dashboard
+# Velozity - Real-Time Client Project Dashboard
 
-A full-stack, enterprise-grade project management dashboard built for client agencies to track project progress, assign tasks, and monitor team activities in real time with strict role-based access control.
-
----
-
-## 🌐 Live Application
-
-| Service | Deployment URL | Status |
-|---|---|---|
-| **Frontend (Vercel)** | `https://velozity-dashboard.vercel.app` | Active |
-| **Backend API (Render)** | `https://velozity-dashboard-is1w.onrender.com` | Active |
-| **API Health Check** | `https://velozity-dashboard-is1w.onrender.com/health` | Active |
+A full-stack project management dashboard for client agencies to track project progress, manage tasks, and monitor team activity in real time with role-based access control.
 
 ---
 
-## 📝 Submission Explanation (150–250 words)
+## Live Links
 
-> **Submission Field Requirement:** The hardest problem solved, real-time role-filtered feed architecture, and one thing done differently.
-
-The most demanding challenge was establishing bulletproof data isolation across the three distinct roles (Admin, Project Manager, Developer) without leaking sensitive details either in database queries or WebSocket streams. Ensuring a developer could only receive real-time feed updates and task items specifically assigned to them—while simultaneously preventing access to other developers' assignments or cross-PM projects—required strict multi-tiered authorization and granular WebSocket room routing (`user:<id>`, `role:ADMIN`). Having built a similar real-time TypeScript dashboard recently, writing the core business logic, schema migrations, and REST APIs felt very familiar and went smoothly.
-
-However, deploying on free-tier infrastructure introduced distinct operational hurdles: Render's free compute spins down on inactivity, causing cold starts and intermittent WebSocket disconnects, while cross-origin HttpOnly cookies required fine-tuned SameSite/Secure headers to work reliably between Vercel and Render.
-
-If I were to do one thing differently, I would decouple the scheduled overdue task runner and WebSocket event dispatching using Redis Pub/Sub and BullMQ instead of in-process node-cron and Socket.io memory adapters. This would allow the backend to scale horizontally across multiple container instances while seamlessly retaining real-time synchronization.
+| Service | URL |
+|---|---|
+| Frontend (Vercel) | [https://velozity-dashboard.vercel.app](https://velozity-dashboard.vercel.app) |
+| Backend API (Render) | [https://velozity-dashboard-is1w.onrender.com](https://velozity-dashboard-is1w.onrender.com) |
+| Health Check | [https://velozity-dashboard-is1w.onrender.com/health](https://velozity-dashboard-is1w.onrender.com/health) |
 
 ---
 
-## 📐 Architectural Decisions
+## Technical Challenges & Implementation Notes
 
-### 1. Real-Time Library: Socket.io vs. Native WebSocket
-- **Decision:** **Socket.io**
-- **Justification:** Socket.io provides automatic reconnection, built-in room abstractions (`role:ADMIN`, `user:<id>`, `project:<id>`), and fallback to HTTP long-polling when corporate firewalls or proxy layers block raw WebSocket upgrades. Rooms made role-filtered live event fanout concise, secure, and maintainable.
+The trickiest part of the project was cleanly isolating data between the three user roles (Admin, PM, Developer) without leaking records through either the database queries or live WebSocket feeds. Making sure developers only see their own assigned tasks and activity—while PMs only access their own projects and Admins have global visibility—required careful Prisma query scoping and dedicated Socket.io rooms (`role:ADMIN`, `user:<id>`). Since I recently worked on a similar TypeScript stack, writing the core controllers, auth middleware, and migrations went pretty fast and felt straightforward.
 
-### 2. Job Scheduling: node-cron vs. Bull Queue
-- **Decision:** **node-cron**
-- **Justification:** For single-instance agency deployments, `node-cron` offers lightweight scheduling without introducing external infrastructure overhead (like a standalone Redis instance). It runs a periodic sweep every 5 minutes to mark past-due tasks as `isOverdue` and trigger real-time alert broadcasts.
-- *Scale-out path:* For distributed multi-server scaling, BullMQ with Redis is documented as the ideal upgrade.
+Deploying on free hosting came with real trade-offs. Render's free tier spins down after idle periods, causing 30-second cold starts and dropping WebSocket connections until reconnection kicks in. Cross-origin HttpOnly cookies also required extra care with `SameSite=None` and `Secure` settings to work reliably between Vercel and Render.
 
-### 3. Token Storage & Authentication Security
-- **Decision:** **Dual-Token Architecture (Access Token in Memory/Header + Refresh Token in HttpOnly Cookie)**
-- **Justification:** 
-  - Short-lived Access Token (15m expiry) is kept in client memory / headers to defend against CSRF attacks.
-  - Long-lived Refresh Token (7d expiry) is stored in an `HttpOnly`, `Secure`, `SameSite=None` cookie inaccessible to client JavaScript, mitigating XSS token theft.
-  - Automatic silent renewal is orchestrated via Axios response interceptors on `401 Unauthorized` responses.
+If I were building this again for production, I’d replace the in-memory Socket.io adapter and node-cron scheduler with Redis Pub/Sub and BullMQ. Running jobs and WebSockets in the same Node process works fine for this setup, but Redis would allow horizontal scaling across multiple instances.
 
 ---
 
-## 🗄️ Database Schema & Indexing Decisions
+## Architectural Decisions
 
-### Schema Overview
+### Real-Time Library: Socket.io vs Native WebSocket
+- **Choice:** Socket.io
+- **Reasoning:** Socket.io handles automatic reconnections out of the box and provides built-in room abstractions (`role:ADMIN`, `user:<id>`, `project:<id>`). This makes targeted, role-scoped event broadcasting clean without having to manually track socket connections and client subscriptions. It also falls back to HTTP long-polling if a proxy or network blocks raw WebSocket upgrades.
+
+### Background Job Scheduler: node-cron vs Bull Queue
+- **Choice:** node-cron
+- **Reasoning:** For this scale and single-container deployment, `node-cron` runs directly inside the Node runtime with zero extra infrastructure. It runs every 5 minutes to scan tasks past their due date, flag them as `isOverdue`, and trigger real-time alerts. If scaling to a multi-instance cluster, BullMQ backed by Redis would be the natural next step.
+
+### Authentication & Token Storage
+- **Choice:** Dual-Token Authentication (JWT in headers + Refresh Token in HttpOnly cookie)
+- **Reasoning:** 
+  - Access tokens expire quickly (15 minutes) and are stored in client memory/headers to protect against CSRF attacks.
+  - Refresh tokens last 7 days and are stored in an `HttpOnly`, `Secure`, `SameSite=None` cookie so JavaScript cannot read them, preventing XSS token theft.
+  - An Axios response interceptor silently requests a new access token on `401 Unauthorized` errors and retries the failed request seamlessly.
+
+---
+
+## Database Schema & Indexing
+
+### Schema Layout
 
 ```
-User (id [PK, UUID], name, email [UQ], password, role [ADMIN|PROJECT_MANAGER|DEVELOPER], createdAt, updatedAt)
+User (id [UUID PK], name, email [Unique], password, role [ADMIN | PM | DEVELOPER], createdAt, updatedAt)
   │
-  ├─ 1:N ── Project (pmId)
-  ├─ 1:N ── Task (developerId)
-  ├─ 1:N ── Activity (userId)
-  └─ 1:N ── Notification (userId)
+  ├── 1:N ── Project (pmId)
+  ├── 1:N ── Task (developerId)
+  ├── 1:N ── Activity (userId)
+  └── 1:N ── Notification (userId)
 
-Client (id [PK, UUID], name, email [UQ], company, createdAt, updatedAt)
+Client (id [UUID PK], name, email [Unique], company, createdAt, updatedAt)
   │
-  └─ 1:N ── Project (clientId)
+  └── 1:N ── Project (clientId)
 
-Project (id [PK, UUID], title, description, clientId [FK], pmId [FK], createdAt, updatedAt)
+Project (id [UUID PK], title, description, clientId [FK], pmId [FK], createdAt, updatedAt)
   │
-  ├─ 1:N ── Task (projectId)
-  └─ 1:N ── Activity (projectId)
+  ├── 1:N ── Task (projectId)
+  └── 1:N ── Activity (projectId)
 
-Task (id [PK, Int], title, description, status [TODO|IN_PROGRESS|IN_REVIEW|DONE], priority [LOW|MEDIUM|HIGH|CRITICAL], dueDate, isOverdue, projectId [FK], developerId [FK], createdAt, updatedAt)
+Task (id [Int PK], title, description, status [TODO | IN_PROGRESS | IN_REVIEW | DONE], priority [LOW | MEDIUM | HIGH | CRITICAL], dueDate, isOverdue, projectId [FK], developerId [FK], createdAt, updatedAt)
   │
-  └─ 1:N ── Activity (taskId)
+  └── 1:N ── Activity (taskId)
 
-Activity (id [PK, UUID], action, description, oldStatus, newStatus, taskId [FK], projectId [FK], userId [FK], createdAt)
+Activity (id [UUID PK], action, description, oldStatus, newStatus, taskId [FK], projectId [FK], userId [FK], createdAt)
 
-Notification (id [PK, UUID], userId [FK], title, message, link, isRead, createdAt)
+Notification (id [UUID PK], userId [FK], title, message, link, isRead, createdAt)
 ```
 
 ### Indexing Decisions
 
-| Table | Indexed Column(s) | Indexing Rationale |
+| Table | Index Column(s) | Purpose |
 |---|---|---|
-| `User` | `email` | Primary authentication identifier lookups during login. |
-| `User` | `role` | Role-based permission checks and presence counting. |
-| `Project` | `pmId` | Scoping projects to their owning Project Manager. |
-| `Project` | `clientId` | Fast joins between clients and project portfolios. |
-| `Task` | `projectId` | Board and list queries scoped to a specific project. |
-| `Task` | `developerId` | Filtering tasks strictly assigned to the authenticated developer. |
-| `Task` | `status`, `priority` | Sorting and query filtering by workflow state and urgency. |
-| `Task` | `dueDate`, `isOverdue` | High-frequency scanning for the overdue background cron job. |
-| `Activity` | `(projectId, createdAt)` | Timeline reconstruction and real-time missed event catch-up. |
-| `Activity` | `createdAt DESC` | Global pagination for Admin activity auditing. |
-| `Notification` | `(userId, isRead)` | Instant count queries for unread user badge notifications. |
+| `User` | `email` | Fast lookups on login |
+| `User` | `role` | Role-filtered queries and online user counts |
+| `Project` | `pmId` | Scoping projects to their owning Project Manager |
+| `Project` | `clientId` | Joining client details to projects |
+| `Task` | `projectId` | Fetching tasks for a specific project board |
+| `Task` | `developerId` | Filtering tasks assigned to a specific developer |
+| `Task` | `status`, `priority` | Sorting and filtering tasks on the dashboard |
+| `Task` | `dueDate`, `isOverdue` | Periodic scan queries for the overdue task cron job |
+| `Activity` | `(projectId, createdAt)` | Timeline order and missed event catch-up on reconnect |
+| `Activity` | `createdAt DESC` | Pagination for activity feeds |
+| `Notification` | `(userId, isRead)` | Fast counts for unread notification badges |
 
 ---
 
-## 🚀 Local Setup Instructions
+## Local Setup
 
-### Option A: Using Docker (Recommended)
+### Option 1: Docker (Recommended)
 
-1. **Clone the repository:**
+1. Clone the repository:
    ```bash
    git clone https://github.com/Heisme001/velozity-dashboard.git
    cd velozity-dashboard
    ```
 
-2. **Configure environment:**
+2. Copy the environment template:
    ```bash
    cp backend/.env.example backend/.env
    ```
 
-3. **Start all services with Docker Compose:**
+3. Start services with Docker Compose:
    ```bash
    docker compose up --build
    ```
 
-4. **Seed sample data inside the container:**
+4. Run database seed:
    ```bash
    docker compose exec backend npx ts-node prisma/seed.ts
    ```
 
-5. **Access the application:**
+5. Open the app:
    - Frontend: [http://localhost:5173](http://localhost:5173)
    - Backend API: [http://localhost:5000/api](http://localhost:5000/api)
-   - Health Endpoint: [http://localhost:5000/health](http://localhost:5000/health)
+   - Health check: [http://localhost:5000/health](http://localhost:5000/health)
 
 ---
 
-### Option B: Manual Local Setup
+### Option 2: Manual Setup
 
-#### 1. PostgreSQL Database
-```bash
-docker run --name velozity_postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgrespassword \
-  -e POSTGRES_DB=velozity_db \
-  -p 5432:5432 -d postgres:15-alpine
-```
+1. **Start PostgreSQL:**
+   ```bash
+   docker run --name velozity_postgres \
+     -e POSTGRES_USER=postgres \
+     -e POSTGRES_PASSWORD=postgrespassword \
+     -e POSTGRES_DB=velozity_db \
+     -p 5432:5432 -d postgres:15-alpine
+   ```
 
-#### 2. Backend Service
-```bash
-cd backend
-npm install
-cp .env.example .env
-npx prisma migrate dev --name init
-npx ts-node prisma/seed.ts
-npm run dev
-```
+2. **Backend:**
+   ```bash
+   cd backend
+   npm install
+   cp .env.example .env
+   npx prisma migrate dev --name init
+   npx ts-node prisma/seed.ts
+   npm run dev
+   ```
 
-#### 3. Frontend Application
-```bash
-cd frontend
-npm install
-npm run dev
-```
+3. **Frontend:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
 ---
 
-## 👥 Demo Accounts (Password: `Password@123`)
+## Test Accounts (Password: `Password@123`)
 
-| Role | Email | Permissions Scope |
+| Role | Email | Scope |
 |---|---|---|
-| **Admin** | `admin@velozity.com` | Full global access across all projects, clients, and activity. |
-| **Project Manager** | `ravi.pm@velozity.com` | Manages own projects, assigns tasks, receives In-Review notifications. |
-| **Project Manager** | `ananya.pm@velozity.com` | Manages separate projects (isolated from Ravi's projects). |
-| **Developer** | `priya.dev@velozity.com` | Sees only assigned tasks, updates task statuses, scoped activity feed. |
-| **Developer** | `siddharth.dev@velozity.com` | Developer assigned to distinct tasks. |
+| Admin | `admin@velozity.com` | Full visibility across all projects and all activities |
+| Project Manager | `ravi.pm@velozity.com` | Manages own projects, assigns tasks, receives review notifications |
+| Project Manager | `ananya.pm@velozity.com` | Separate PM account (isolated projects) |
+| Developer | `priya.dev@velozity.com` | Views assigned tasks only, updates task status |
+| Developer | `siddharth.dev@velozity.com` | Assigned to separate developer tasks |
 
 ---
 
-## ⚠️ Known Limitations
+## Known Limitations
 
-1. **Free Tier Cold Starts & Idle Disconnects:**
-   Deployments hosted on Render free tier spin down after 15 minutes of inactivity. The initial wake-up request can take 30–50 seconds, during which WebSocket handshakes will temporarily retry before succeeding.
-2. **In-Memory Socket Adapter:**
-   Socket.io is currently configured with the default memory adapter. Running multiple backend instances requires attaching `@socket.io/redis-adapter` with a Redis broker to share broadcast rooms.
-3. **Cross-Origin Cookie Policies on Strict Privacy Browsers:**
-   Third-party cookie restrictions in certain browsers (e.g., Safari ITP or Brave) may occasionally block cross-domain refresh token cookies when the frontend (`vercel.app`) and backend (`onrender.com`) are on different root domains.
+- **Free-tier cold starts:** Render spins down free backend web services after 15 minutes of inactivity. Initial page loads after idle take 30–45 seconds while the service boots up.
+- **In-memory Socket.io adapter:** The current setup uses Socket.io's default memory adapter, which is fine for a single instance. Multi-server deployment would require an adapter backed by Redis.
+- **Third-party cookies:** Strict privacy modes on some browsers (like Safari ITP or Brave) can occasionally block cross-origin cookies between different domains (`vercel.app` and `onrender.com`).
