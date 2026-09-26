@@ -16,8 +16,13 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    return callback(null, origin);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
 app.use(express.json());

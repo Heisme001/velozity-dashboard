@@ -14,7 +14,10 @@ class SocketManager {
   public init(httpServer: HttpServer) {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: (origin, callback) => callback(null, true),
+        origin: (origin, callback) => {
+          if (!origin) return callback(null, true);
+          return callback(null, origin);
+        },
         credentials: true
       }
     });
