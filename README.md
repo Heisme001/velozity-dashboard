@@ -8,7 +8,7 @@ A full-stack project management dashboard for client agencies to track project p
 
 | Service | URL |
 |---|---|
-| Frontend (Vercel) | [https://velozity-dashboard.vercel.app](https://velozity-dashboard.vercel.app) |
+| Frontend (Vercel) | [https://velozity-dashboard.vercel.app]([https://velozity-dashboard.vercel.app](https://velozity-dashboard-jaldkw6nt-hemanth-kumars-projects-de5dd856.vercel.app)) |
 | Backend API (Render) | [https://velozity-dashboard-is1w.onrender.com](https://velozity-dashboard-is1w.onrender.com) |
 | Health Check | [https://velozity-dashboard-is1w.onrender.com/health](https://velozity-dashboard-is1w.onrender.com/health) |
 
